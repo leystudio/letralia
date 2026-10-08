@@ -182,8 +182,20 @@ function nextActivity(level,index,returnTo){
  return nextRoundItem(journey,level,LEVELS.length);
 }
 function finishItem(){clearPending();state.phase='success';const w=item();if(!learned.includes(w.text))learned.push(w.text);const id=`${state.level}:${state.item}`;if(!completions.includes(id))completions.push(id);sessionCount++;if(!state.review){const ended=completeRoundItem(journey,state.level,state.item);if(ended)journey.current=Math.min(state.level+1,LEVELS.length-1)}persist();collection();celebrate()}
-function fanfare(done){cancelSpeech();const id=speechId;let finished=false;const finish=()=>{if(finished||id!==speechId)return;finished=true;done()};if(!prefs.sounds){delay(finish,100);return}const audio=new Audio('audio/fanfare.wav');activeAudio=audio;audio.volume=.65;audio.onended=finish;audio.onerror=finish;audio.play().catch(finish);delay(finish,2500)}
-function celebrate(){clearPending();mascotMood('happy');state.phase='success';keyboard.hidden=true;const next=nextActivity(state.level,state.item,state.returnTo);activity.innerHTML=`<div class="success"><div class="success-star">🌟</div><h2 aria-label="Muy bien">🙌</h2><div class="read-word">${esc(item().text)}</div></div>`;const praise=done=>next&&next.level!==state.level?done():say('¡Muy bien!',done);praise(()=>{if(state.phase!=='success'||modal.open)return;fanfare(()=>{if(state.phase!=='success'||modal.open)return;if(!next){activity.innerHTML='<div class="success"><div class="success-star">🏆</div><h2 aria-label="Lo lograste">🌟</h2><button class="primary" id="again" aria-label="Elegir otra aventura">🗺</button></div>';state.phase='complete';$('#again').onclick=showLevels;say('¡Muy bien! Has terminado todas las aventuras.');return}if(next.level!==state.level){$('#activity .success-star').textContent='🏅';$('#activity h2').textContent=`🚀 ${next.level+1}`;say(`¡Muy bien! Vamos al nivel ${next.level+1}.`,()=>{if(state.phase==='success'&&!modal.open)startLevel(next.level,next.index)})}else startLevel(next.level,next.index)})})}
+function celebrate(){
+ clearPending();mascotMood('happy');state.phase='success';keyboard.hidden=true;
+ const next=nextActivity(state.level,state.item,state.returnTo);
+ const newLevel=next&&next.level!==state.level;
+ activity.innerHTML=`<div class="success"><div class="success-star">${newLevel?'🏅':'🌟'}</div><h2 aria-label="${newLevel?'Siguiente nivel':'Muy bien'}">${newLevel?'🚀 '+(next.level+1):'🙌'}</h2><div class="read-word">${esc(item().text)}</div></div>`;
+ delay(()=>{
+  if(state.phase!=='success'||modal.open)return;
+  if(!next){
+   activity.innerHTML='<div class="success"><div class="success-star">🏆</div><h2 aria-label="Lo lograste">🌟</h2><button class="primary" id="again" aria-label="Elegir otra aventura">🗺</button></div>';
+   state.phase='complete';$('#again').onclick=showLevels;return;
+  }
+  startLevel(next.level,next.index);
+ },350);
+}
 function pause(){if(state.phase==='paused')return;resumePhase=state.phase;clearPending();state.phase='paused';keyboard.hidden=true;activity.innerHTML='<div class="paused"><div class="success-star">☀</div><h2 aria-label="Pausa">Ⅱ</h2><button class="primary" id="resume" aria-label="Seguir jugando">▶</button></div>';$('#resume').onclick=resume}
 function resume(){if(resumePhase==='typing'){state.phase='typing';state.lockedUntil=performance.now()+650;renderTyping();promptLetter()}else if(resumePhase==='reading'){state.phase='reading';readStage()}else if(resumePhase==='matching'){remedialStage()}else if(resumePhase==='discovery'){discoveryStage()}else if(resumePhase==='quiz'){quizStage()}else if(resumePhase==='success'){celebrate()}else showLevels()}
 window.addEventListener('blur',()=>held.clear());
