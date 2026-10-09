@@ -1,4 +1,4 @@
-import {SPANISH_AUDIO} from './spanish-audio.js?v=21';
+import {SPANISH_AUDIO} from './spanish-audio.js?v=24';
 import {makeRound,cleanJourney,completeRoundItem,nextRoundItem} from './journey.js?v=19';
 import {QUICK_AUDIO} from './quick-audio.js?v=18';
 import {createGameSounds} from './game-sounds.js?v=17';
@@ -6,7 +6,7 @@ import {createBackgroundMusic, MUSIC_TRACKS} from './background-music.js?v=17';
 import {exampleSegments, SCENES, defaultScene} from './learning-visuals.js?v=15';
 import {LEVELS, VOCABULARY, shuffled, makeDeck, gamePrompt, letterName, normalize, canAccept, readingSequence} from './curriculum.js?v=20';
 import {ADAPTIVE_AUDIO,cleanMemory,record,initialCue,rowFor,matchingChoices,selectReview} from './adaptive.js?v=15';
-import {AUDIO} from './audio-manifest.js?v=22';
+import {AUDIO} from './audio-manifest.js?v=24';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const modal=$('#modal'), activity=$('#activity'), keyboard=$('#keyboard');
 const defaults={voice:'',rate:.82,hints:'auto',lower:false,motion:matchMedia('(prefers-reduced-motion: reduce)').matches,layout:'es',save:true,sounds:true,music:true};
@@ -41,7 +41,7 @@ function cancelSpeech(){speechId++;window.speechSynthesis?.cancel();if(activeAud
 function clearPending(){clearVisuals();timers.forEach(clearTimeout);timers=[];cancelSpeech();held.clear()}
 function selectedVoice(){return voices.find(v=>v.voiceURI===prefs.voice)||voices.find(v=>/^es-(DO|MX|US|419)/i.test(v.lang))||voices.find(v=>/^es/i.test(v.lang))}
 function updateVoices(){voices=window.speechSynthesis?.getVoices().filter(v=>/^es/i.test(v.lang))||[];if($('#voice-select'))fillVoiceSelect()}
-function say(text,done,quick=false){text=text.replaceAll('Busca la letra be.','Busca la letra be de burro.');currentSpeech=text;cancelSpeech();music.duck(true);const id=speechId;let finished=false;const finish=()=>{if(finished||id!==speechId)return;finished=true;document.body.classList.remove('speaking');music.duck(false);done?.()};const recorded=()=>{if(id!==speechId)return;if(!SPANISH_AUDIO[text]&&!AUDIO[text]){voiceNotice();delay(finish,700);return}const audio=new Audio(SPANISH_AUDIO[text]||(quick&&QUICK_AUDIO[text])||AUDIO[text]);activeAudio=audio;audio.playbackRate=prefs.rate/.82;audio.onended=finish;audio.onerror=()=>{voiceNotice();finish()};audio.play().then(()=>{if(id===speechId){$('#voice-notice')?.remove();document.body.classList.add('speaking')}else audio.pause()}).catch(()=>{if(id===speechId){voiceNotice();finish()}})};const voice=SPANISH_AUDIO[text]||!prefs.voice||prefs.voice==='recorded'?null:selectedVoice();if(!('speechSynthesis'in window)||!voice){recorded();return}$('#voice-notice')?.remove();const u=new SpeechSynthesisUtterance(text);u.voice=voice;u.lang=voice.lang;u.rate=prefs.rate*(quick?1.10:1);u.pitch=1.05;u.onstart=()=>document.body.classList.add('speaking');u.onend=finish;u.onerror=e=>{if(e.error!=='canceled'&&e.error!=='interrupted')recorded()};speechSynthesis.speak(u);delay(finish,Math.max(6000,text.length*130))}
+function say(text,done,quick=false){currentSpeech=text;cancelSpeech();music.duck(true);const id=speechId;let finished=false;const finish=()=>{if(finished||id!==speechId)return;finished=true;document.body.classList.remove('speaking');music.duck(false);done?.()};const recorded=()=>{if(id!==speechId)return;if(!SPANISH_AUDIO[text]&&!AUDIO[text]){voiceNotice();delay(finish,700);return}const audio=new Audio(SPANISH_AUDIO[text]||(quick&&QUICK_AUDIO[text])||AUDIO[text]);activeAudio=audio;audio.playbackRate=prefs.rate/.82;audio.onended=finish;audio.onerror=()=>{voiceNotice();finish()};audio.play().then(()=>{if(id===speechId){$('#voice-notice')?.remove();document.body.classList.add('speaking')}else audio.pause()}).catch(()=>{if(id===speechId){voiceNotice();finish()}})};const voice=SPANISH_AUDIO[text]||!prefs.voice||prefs.voice==='recorded'?null:selectedVoice();if(!('speechSynthesis'in window)||!voice){recorded();return}$('#voice-notice')?.remove();const u=new SpeechSynthesisUtterance(text);u.voice=voice;u.lang=voice.lang;u.rate=prefs.rate*(quick?1.10:1);u.pitch=1.05;u.onstart=()=>document.body.classList.add('speaking');u.onend=finish;u.onerror=e=>{if(e.error!=='canceled'&&e.error!=='interrupted')recorded()};speechSynthesis.speak(u);delay(finish,Math.max(6000,text.length*130))}
 function voiceNotice(){let n=$('#voice-notice');if(!n){n=document.createElement('p');n.id='voice-notice';n.className='voice-status';$('.game-foot').before(n)}n.textContent='No pudimos reproducir la voz en español. Un adulto puede revisar «Para familias → Voz». Las pistas escritas siguen disponibles.'}
 function collection(){ $('#collection').textContent=`★ ${learned.length}`;$('#collection-bar').style.width=Math.min(100,learned.length/30*100)+'%'}
 function setSteps(n){$$('.step').forEach((e,i)=>e.classList.toggle('current',i===n))}
@@ -160,7 +160,7 @@ function readStage(){
 function readTogether(){
  if(!$('#read-word')){readStage();return}
  clearPending();const w=item(),sequence=readingSequence(w,state.level);let i=0;
- const preloaded=sequence.filter(s=>s.part>=0&&!s.example&&QUICK_AUDIO[s.text]).map(s=>{const a=new Audio(QUICK_AUDIO[s.text]);a.preload='auto';a.load();return a});
+ const preloaded=sequence.filter(s=>s.part>=0&&!s.example&&(SPANISH_AUDIO[s.text]||QUICK_AUDIO[s.text])).map(s=>{const a=new Audio(SPANISH_AUDIO[s.text]||QUICK_AUDIO[s.text]);a.preload='auto';a.load();return a});
  function next(){
   if(state.phase!=='reading'||modal.open)return;
   if(i>=sequence.length){finishItem();return}
