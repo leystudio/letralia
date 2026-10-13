@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+let handler,deleted=null,verified=null;
+const source=(await readFile(new URL('../supabase/functions/delete-account/index.ts',import.meta.url),'utf8')).replace(/^import .*;\r?\n/,'');
+const env={SUPABASE_URL:'https://example.test',SUPABASE_SERVICE_ROLE_KEY:'server-test-key',SUPABASE_ANON_KEY:'public-test-key'};
+vm.runInNewContext(source,{Request,Response,Deno:{env:{get:k=>env[k]},serve:fn=>handler=fn},createClient:(url,key)=>key==='server-test-key'?{auth:{admin:{deleteUser:async id=>{deleted=id;return {error:null}}}}}:{auth:{getUser:async token=>{verified=token;return token==='valid'?{data:{user:{id:'verified-parent'}},error:null}:{data:{user:null},error:Error('bad token')}}}}});
+const call=(method,token,body)=>handler(new Request('https://example.test/delete-account',{method,headers:token?{Authorization:token}:undefined,...(body?{body:JSON.stringify(body)}:{})}));
+assert.equal((await call('OPTIONS')).status,200);assert.equal((await call('GET')).status,405);assert.equal((await call('POST')).status,401);assert.equal((await call('POST','Bearer invalid')).status,401);assert.equal(deleted,null);
+assert.equal((await call('POST','Bearer valid',{user_id:'someone-else'})).status,204);assert.equal(verified,'valid');assert.equal(deleted,'verified-parent');
+console.log('PASS: delete-account rejects unauthenticated/invalid tokens and only deletes the verified user, never a supplied ID.');

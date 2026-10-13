@@ -1,0 +1,13 @@
+{
+  "name": "letralia",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/check-progress-store.mjs && node tests/check-accounts-rls.mjs && node tests/check-delete-account.mjs",
+    "test:browser": "node tests/check-accounts-browser.mjs && node tests/check-accounts-offline.mjs"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.3.14",
+    "playwright": "1.56.1"
+  }
+}

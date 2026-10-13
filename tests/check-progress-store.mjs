@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {createProgressStore} from '../progress-store.js';
+const backing=new Map();const storage={getItem:k=>backing.get(k)||null,setItem:(k,v)=>backing.set(k,v),removeItem:k=>backing.delete(k),get length(){return backing.size},key:i=>[...backing.keys()][i]};
+let online=false;const sent=[];let unblock;
+const store=createProgressStore({storage,online:()=>online,upload:async(id,data,user)=>{sent.push({id,data,user});if(unblock===true)await new Promise(r=>unblock=r)}});
+store.write('letralia-v1',{learned:['guest']});store.setOwner('parent-a');store.setActive('luna');
+store.queue('luna',{learned:['luna']});store.setActive('sol');store.queue('sol',{learned:['sol']});
+assert.deepEqual(store.read('letralia-v1'),{learned:['guest']});assert.equal(sent.length,0);
+store.setOwner('parent-b');assert.equal(store.cached('luna'),null);assert.equal(store.activeId(),null);
+store.queue('luna',{learned:['wrong']});store.setOwner('parent-a');assert.equal(store.cached('luna').pending_sync,true);
+online=true;await store.flushAll(['luna','sol']);assert.equal(sent.length,2);assert.equal(store.cached('luna').pending_sync,false);
+store.setActive('luna');store.queue('luna',{learned:['old']});unblock=true;const flight=store.flush('luna');
+store.queue('luna',{learned:['new']});const release=unblock;unblock=null;release();await flight;
+assert.deepEqual(sent.at(-1).data,{learned:['new']});assert.deepEqual(store.cached('luna').data,{learned:['new']});
+store.queue('luna',{learned:['pending']});unblock=true;const old=store.flush('luna');store.setOwner('parent-b');const release2=unblock;unblock=null;release2();await old;assert.equal(store.cached('luna'),null);
+store.setOwner('parent-a');store.forget('luna');assert.equal(store.cached('luna'),null);store.forgetOwner();assert.deepEqual(store.read('letralia-v1'),{learned:['guest']});
+let warning=false;const blocked=createProgressStore({storage:{getItem(){throw Error()},setItem(){throw Error()},removeItem(){}},upload:async()=>{},notify:()=>warning=true});blocked.setOwner('a');blocked.setActive('b');blocked.queue('b',{learned:['safe']});assert(warning);assert.deepEqual(blocked.cached('b').data,{learned:['safe']});blocked.setOwner(null);
+console.log('PASS: guest/child/account isolation, per-child offline queues, race-safe writes, logout races, deletion cleanup and blocked localStorage fallback.');

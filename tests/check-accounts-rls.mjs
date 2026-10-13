@@ -1,0 +1,36 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {PGlite} from '@electric-sql/pglite';
+const db=new PGlite();
+await db.exec(`create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key,email text); create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$; grant usage on schema public,auth to authenticated,anon; grant execute on function auth.uid() to authenticated,anon;`);
+const schema=await readFile(new URL('../supabase-schema.sql',import.meta.url),'utf8');await db.exec(schema);await db.exec(schema);
+const a='11111111-1111-4111-8111-111111111111',b='22222222-2222-4222-8222-222222222222';
+await db.query('insert into auth.users values ($1,$2),($3,$4)',[a,'a@example.test',b,'b@example.test']);
+async function as(id){await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[id]);await db.exec('set role authenticated')}
+async function denied(sql,args=[]){await assert.rejects(db.query(sql,args));}
+await as(a);
+const child=(await db.query("insert into children(nickname,age_band) values ('Luna','4-5') returning id")).rows[0].id;
+const second=(await db.query("insert into children(nickname,age_band) values ('Sol','6-7') returning id")).rows[0].id;
+const first=(await db.query('select initialize_child_progress($1,$2) as r',[child,{learned:['casa']}])).rows[0].r;
+assert.equal(first.imported,true);assert.deepEqual(first.data,{learned:['casa']});
+const again=(await db.query('select initialize_child_progress($1,$2) as r',[child,{learned:['wrong']}])).rows[0].r;
+assert.equal(again.imported,false);assert.deepEqual(again.data,{learned:['casa']});
+const other=(await db.query('select initialize_child_progress($1,$2) as r',[second,{learned:['wrong']}])).rows[0].r;assert.deepEqual(other.data,{});
+await denied("update parents set plan='premium' where id=$1",[a]);
+await denied("insert into children(parent_id,nickname,age_band) values ($1,'Wrong','4-5')",[b]);
+await denied("insert into children(nickname,age_band) values ('','4-5')");
+await as(b);
+assert.equal((await db.query('select * from children')).rows.length,0);assert.equal((await db.query('select * from progress')).rows.length,0);
+assert.equal((await db.query('select * from parents')).rows.length,1);
+await denied("insert into progress(child_id,data) values ($1,'{}')",[child]);
+await denied('select initialize_child_progress($1,$2)',[child,{}]);
+assert.equal((await db.query("update children set nickname='Stolen' where id=$1 returning id",[child])).rows.length,0);
+assert.equal((await db.query('delete from progress where child_id=$1 returning child_id',[child])).rows.length,0);
+await as(a);
+await denied("update children set parent_id=$1 where id=$2",[b,child]);
+await db.query('delete from children where id=$1',[child]);assert.equal((await db.query('select * from progress where child_id=$1',[child])).rows.length,0);
+await db.exec('reset role; set role anon');await denied('select * from parents');await denied('select * from children');await denied('select initialize_child_progress($1,$2)',[second,{}]);
+await db.exec('reset role');await db.query('delete from auth.users where id=$1',[a]);
+assert.equal((await db.query('select * from children where parent_id=$1',[a])).rows.length,0);
+assert.equal((await db.query('select * from progress')).rows.length,0);
+await db.close();console.log('PASS: actual PostgreSQL RLS with two users + anon, denied escalation/foreign access, import once/cloud priority, cascading deletes, repeatable schema.');
