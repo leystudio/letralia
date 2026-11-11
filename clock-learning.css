@@ -24,3 +24,45 @@
 .clock-dialog #modal-body { padding: clamp(12px, 3vw, 32px); }
 .clock-dialog .eyebrow { font-size: .85rem; font-weight: 800; color: #67557a; }
 @media (max-width: 760px) { .clock-dialog #modal-body { padding-bottom: 95px; } .clock-dialog .dialog-head h2 { font-size: 18px; } }
+/* A child can follow the clock, the speaker, and the same green play button. */
+.little-welcome,.little-demo{text-align:center;padding:clamp(12px,3vw,24px)}
+.little-welcome{display:flex;align-items:center;justify-content:center;gap:32px;background:#f0eafa;border:2px solid #dfd2eb;border-radius:26px}
+.little-welcome .clock-welcome-art{width:clamp(145px,24vw,235px);flex-shrink:0}
+.little-welcome h2,.little-demo h2{margin:0 0 12px;font-size:clamp(23px,4vw,32px)}
+.little-welcome button{display:block;width:100%;margin:8px auto}
+.clock-app .little-play{min-width:140px;min-height:62px;font-size:23px}
+.little-lessons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px auto;max-width:760px}
+.little-lessons button{position:relative;display:grid;justify-items:center;padding:10px;background:#fffdf7;border:2px solid #dbcee5;border-bottom-width:4px;color:#49365e}
+.little-lessons strong{font-size:clamp(16px,3vw,23px);font-variant-numeric:tabular-nums}
+.little-lessons button>span{position:absolute;right:8px;color:#9c6918}
+.little-example{max-width:min(330px,70vw);margin:auto}
+.little-time{margin:10px auto;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:10px;width:100%;max-width:370px}
+.little-time strong{font-size:clamp(28px,5vw,40px)}
+.little-task-top{display:flex;align-items:center;justify-content:space-between;gap:8px;max-width:860px;margin:0 auto 8px}
+.little-task-top .clock-task-title{margin:0!important;font-size:clamp(20px,4vw,27px)!important}
+.little-task-top .legend-hand{vertical-align:middle}
+.little-task-top .clock-stars{font-size:20px}
+.little-hints{display:flex;gap:8px;justify-content:center;margin:12px auto 0}
+.clock-app .little-hints button{min-height:48px}
+.little-choice{display:grid;grid-template-columns:48px minmax(0,1fr);border:2px solid #cbbbdc;border-radius:17px;overflow:hidden;background:#fffdf8}
+.clock-reading-choices .little-choice button{min-height:62px;margin:0;border:0;border-radius:0;padding:4px;font-size:clamp(18px,2.7vw,26px)}
+.clock-reading-choices .little-choice [data-listen-answer]{background:#e4eef0;font-size:20px}
+.clock-reading-choices .little-choice .clock-try-again{background:#ffedbb}
+.clock-app .clock-feedback:not(:empty){text-align:center;padding:5px;margin:6px 0}
+@keyframes clock-demonstrate{from{transform:rotate(-75deg)}to{transform:rotate(0deg)}}
+@keyframes clock-touch-tip{0%,100%{stroke-width:3px}50%{stroke-width:7px}}
+@media(prefers-reduced-motion:no-preference){
+ .little-example [data-needle]{transform-origin:220px 220px;animation:clock-demonstrate .95s ease-out both}
+ .little-example [data-needle=hour]{animation-delay:.95s}.little-example [data-needle=second]{animation-delay:1.9s}
+ .clock-active-needle circle:first-of-type{animation:clock-touch-tip 1.1s ease-in-out 3}
+}
+@media(max-width:760px){
+ .little-welcome{gap:10px}.little-welcome .clock-welcome-art{width:40%;order:0;padding:0}.little-welcome .clock-welcome-art>img{right:-2px;width:45%}
+ .little-lessons{gap:8px}.little-lessons svg{width:54px;height:54px}
+ .clock-app[data-clock-view=exercise] .clock-board{max-width:min(285px,72vw)}
+ .clock-app[data-clock-view=exercise] .clock-task-panel{padding:10px 10px 78px}
+ .clock-workspace{gap:10px}.clock-hand-controls{margin:4px}
+ .clock-reading-choices{gap:6px}.little-choice{grid-template-columns:42px minmax(0,1fr)}
+ .clock-app[data-clock-view=exercise] .clock-hand-controls button{min-height:48px}
+ .clock-app[data-clock-view=exercise] .clock-reading-choices button{min-height:54px}
+}
