@@ -73,6 +73,22 @@ function gateForParent(next){
  $$('[data-number]').forEach(button=>button.onclick=()=>{const input=$('#gate-answer');input.value=button.dataset.number==='⌫'?input.value.slice(0,-1):(input.value+button.dataset.number).slice(0,2)});
 }
 function notifyAccount(message){const t=$('#status');t.textContent=message;t.hidden=false;clearTimeout(notifyAccount.timer);notifyAccount.timer=setTimeout(()=>t.hidden=true,5000)}
+function returnToLetralia(event) {
+ const link = event.target.closest?.('[data-letralia-home]');
+ if (!link || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+ event.preventDefault();
+ const progress = progressSnapshot();
+ if (modal.open) modal.close();
+ if (location.hash === '#reloj') history.replaceState(null, '', location.pathname + location.search);
+ resetGame(progress);
+ window.scrollTo(0, 0);
+ const play = document.getElementById('start');
+ play.focus({preventScroll:true});
+ if (!prefs.motion && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  play.animate?.([{transform:'scale(1)'},{transform:'scale(1.06)'},{transform:'scale(1)'}], {duration:450});
+ }
+ say('¡Hola! Soy Lilo. Vamos a jugar con letras y palabras.');
+}
 function resetGame(data){
  applyProgress(data);keyboard.hidden=true;
  activity.innerHTML='<div class="welcome"><div class="word-picture" aria-label="Casa">🏠</div><div class="preview-letters"><span>C</span><span>A</span><span>S</span><span>A</span></div><button class="primary" id="start" aria-label="Empezar a jugar">▶</button><p class="guest-prompt">Juegas como invitado · <button id="guest-account">Crea tu cuenta gratis</button> para guardar el progreso en todos tus equipos</p></div>';
@@ -255,7 +271,7 @@ const firstLevel=journey.current,firstRound=journey.rounds[firstLevel];
 const firstIndex=firstRound?.deck.find(i=>!firstRound.done.includes(i))??makeDeck(firstLevel,completions,recent[firstLevel])[0];
 const firstWord=LEVELS[firstLevel].items[firstIndex];
 $('.word-picture').textContent=firstWord.icon;$('.word-picture').setAttribute('aria-label',firstWord.meaning);$('.preview-letters').innerHTML=[...firstWord.text].map(c=>`<span>${esc(displayChar(c))}</span>`).join('');
-$('#start').onclick=()=>{updateVoices();startLevel(journey.current)};$('#map-nav').onclick=showLevels;$('#explore').onclick=showLevels;$('#family-nav').onclick=showFamily;$('#account-nav').onclick=accounts.account;$('#play-nav').onclick=()=>{if(modal.open)closeModal();if(state.phase==='paused')resume()};$('.brand').onclick=e=>{e.preventDefault();if(modal.open)closeModal();if(state.phase==='paused')resume();else if(state.phase!=='welcome')showLevels()};
+$('#start').onclick=()=>{updateVoices();startLevel(journey.current)};$('#map-nav').onclick=showLevels;$('#explore').onclick=showLevels;$('#family-nav').onclick=showFamily;$('#account-nav').onclick=accounts.account;$('#play-nav').onclick=()=>{if(modal.open)closeModal();if(state.phase==='paused')resume()};document.addEventListener('click', returnToLetralia);
 $('#mascot-wrap').innerHTML='<img src="mascot.png" alt="Lilo, un zorrito que saluda con su libro turquesa" width="216" height="216">';document.body.classList.toggle('reduced',prefs.motion);collection();updateVoices();window.speechSynthesis?.addEventListener('voiceschanged',updateVoices);
 const context=document.modelContext;if(context?.registerTool){const lifecycle=new AbortController();for(const tool of [{name:'read_learning_state',description:'Read the current level and stage. Does not complete any learning activity.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true},execute(){return {level:state.level+1,stage:state.phase,item:state.phase==='welcome'?null:item().text,completed:completions.length,roundCompleted:journey.rounds[state.level]?.done.length||0,roundTotal:5,levelsCompleted:journey.medals.length}}},{name:'start_learning_level',description:'Open a level for the child to practice. Does not submit answers or mark learning complete.',inputSchema:{type:'object',properties:{level:{type:'integer',minimum:1,maximum:LEVELS.length}},required:['level'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input||Object.keys(input).some(k=>k!=='level')||!Number.isInteger(input.level)||input.level<1||input.level>LEVELS.length)throw Error(`El nivel debe ser un entero de 1 a ${LEVELS.length}`);startLevel(input.level-1);return {level:input.level,stage:state.phase}}}]){try{Promise.resolve(context.registerTool(tool,{signal:lifecycle.signal})).catch(()=>{})}catch{}}window.addEventListener('pagehide',()=>lifecycle.abort(),{once:true})}
 
