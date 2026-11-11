@@ -17,7 +17,7 @@ export function spokenTime(t,seconds=false){
  const h=mod(t.h,12),prefix=h===1?'Es la':'Son las';
  let value=`${prefix} ${names[h]}`;
  if(t.m===0)value+=' en punto';else if(t.m===15)value+=' y cuarto';else if(t.m===30)value+=' y media';else if(t.m===45){const next=mod(h+1,12);value=`${next===1?'Es la':'Son las'} ${names[next]} menos cuarto`}else value+=` y ${t.m}`;
- return value+(seconds?`, con ${t.s||0} segundos`:'');
+ return value+(seconds?`, con ${t.s===1?'un segundo':(t.s||0)+' segundos'}`:'');
 }
 export const lessonFor=id=>CLOCK_LESSONS.find(l=>l.id===id)||CLOCK_LESSONS[0];
 export function taskFor(lesson,index,variant=0){const time=timeOf(lesson.times[(index+variant*2)%lesson.times.length]);return {time,type:index%2===0?'set':'read'}}
@@ -72,6 +72,8 @@ export function cleanClock(raw){
   const hands={};for(const hand of ['hour','minute','second']){const n=a.hands?.[hand];hands[hand]=Number.isFinite(n)?mod(Math.round(n),hand==='hour'?720:60):fallback[hand]}
   active={lesson:a.lesson,index:a.index,variant,hands,step:Math.min(lesson.seconds?2:1,count(a.step)),done:!!a.done,helped:!!a.helped,mistakes:count(a.mistakes),hints:Math.min(2,count(a.hints)),results:Array.isArray(a.results)?a.results.slice(0,4).map(x=>({independent:!!x.independent,type:x.type==='read'?'read':'set'})):[]};
  }
- return {version:1,lessons,lastLesson:CLOCK_LESSONS.some(l=>l.id===p.lastLesson)?p.lastLesson:'hours',active};
+ const foundation=p.foundation;
+ const saved=Number.isInteger(foundation?.index)&&foundation.index>=0?{foundation:{index:foundation.index,complete:foundation.complete===true}}:{};
+ return {version:1,...saved,lessons,lastLesson:CLOCK_LESSONS.some(l=>l.id===p.lastLesson)?p.lastLesson:'hours',active};
 }
 export function newClockSession(id,variant=0){const lesson=lessonFor(id);return {lesson:lesson.id,index:0,variant:variant%3,hands:initialHands(lesson,taskFor(lesson,0,variant).time),step:0,done:false,helped:false,mistakes:0,hints:0,results:[]}}

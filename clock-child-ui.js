@@ -1,4 +1,4 @@
-import {CLOCK_LESSONS,timeOf,clockAngles,digitalTime,spokenTime,readingChoices} from './clock-model.js?v=34';
+import {CLOCK_LESSONS,timeOf,clockAngles,digitalTime,spokenTime,readingChoices} from './clock-model.js?v=39';
 const HAND_COLORS={minute:'#087d80',hour:'#6943ad',second:'#b74419'};
 
 export function littleClock(lesson) {
@@ -10,22 +10,24 @@ export function littleClock(lesson) {
 }
 
 export function clockMenuView(progress, face) {
-  const playId = progress.active ? 'clock-continue' : 'clock-play';
+  const beginner=!progress.foundation?.complete;
+  const playId = !beginner && progress.active ? 'clock-continue' : 'clock-play';
   return `<section class="little-welcome">
-    <div class="clock-welcome-art">${face}<img src="mascot-transparent.png" alt="Lilo"></div>
+    <div class="clock-welcome-art">${beginner?'<div class="basics-preview"><span>🌼</span></div>':face}<img src="mascot-transparent.png" alt="Lilo"></div>
     <div><h2 data-clock-title tabindex="-1">La hora con Lilo</h2>
-    <button class="primary little-play" id="${playId}">▶ ${progress.active ? 'Seguir' : 'Jugar'}</button>
-    <button class="clock-quiet" id="clock-explore">🔍 Explorar</button></div>
-  </section><div class="little-lessons">${CLOCK_LESSONS.map(l => `<button data-clock-lesson="${l.id}" aria-label="${l.name}" title="${l.name}">
+    <button class="primary little-play" id="${playId}">▶ ${beginner ? (progress.foundation?"Seguir":"Empezar") : progress.active ? 'Seguir' : 'Jugar'}</button>
+    ${beginner && progress.active?'<button class="clock-quiet" id="clock-continue">▶ Mi ejercicio</button>':''}
+    ${!beginner?'<button class="clock-quiet" id="clock-from-zero">🌼 Desde el inicio</button>':''}<button class="clock-quiet" id="clock-explore">🔍 Explorar</button></div>
+  </section><details class="basics-practice" ${beginner?'':'open'}><summary>🎯 Practicar la hora</summary><div class="little-lessons">${CLOCK_LESSONS.map(l => `<button data-clock-lesson="${l.id}" aria-label="${l.name}" title="${l.name}">
     ${littleClock(l)}<strong>${digitalTime(timeOf(l.example), l.seconds)}</strong>
-    ${progress.lessons[l.id]?.sessions ? '<span aria-label="Completado">★</span>' : ''}</button>`).join('')}</div>`;
+    ${progress.lessons[l.id]?.sessions ? '<span aria-label="Completado">★</span>' : ''}</button>`).join('')}</div></details>`;
 }
 
-export function clockIntroView(l,t,face){
+export function clockIntroView(l,demo,face,i){
   return `<div class="little-demo"><h2 data-clock-title tabindex="-1">👀 Mira</h2>
-    <div class="little-example" role="img" aria-label="${spokenTime(t,l.seconds)}">${face}</div>
-    <button class="clock-time-card little-time" id="clock-example-hear" aria-label="Escuchar la hora">🔊 <strong>${digitalTime(t,l.seconds)}</strong></button>
-    <button class="primary little-play" id="clock-start-lesson">▶ Jugar</button></div>`;
+    ${face}<button class="clock-time-card little-time" id="clock-example-hear" aria-label="Escuchar este ejemplo">🔊 <strong>${digitalTime(demo.t,l.seconds)}</strong></button>
+    <div class="basics-options"><button class="${i<demo.count?'primary':'clock-quiet'}" id="clock-bridge-step" aria-label="${i<demo.count?'Avanzar las agujas':'Repetir el ejemplo'}">${i<demo.count?'⟳ Avanzar':'↻ Ver otra vez'}</button>
+    <button class="${i===demo.count?'primary':'clock-quiet'}" id="clock-start-lesson">▶ Jugar</button></div></div>`;
 }
 
 export function clockTaskView(a,l,t,type,hand){

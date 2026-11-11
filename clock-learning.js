@@ -1,6 +1,7 @@
-import {CLOCK_LESSONS,lessonFor,taskFor,readingChoices,timeOf,clockAngles,digitalTime,spokenTime,initialHands,handStep,snapHand,handCorrect,placedAngles,hourExplanation,handHint,cleanClock,newClockSession,mod} from './clock-model.js?v=34';
+import {FOUNDATIONS, BASICS_COPY, countWords, foundationView, lessonClock, bridgeState, foundationVoices} from './clock-foundations.js?v=39';
+import {CLOCK_LESSONS,lessonFor,taskFor,readingChoices,timeOf,clockAngles,digitalTime,spokenTime,initialHands,handStep,snapHand,handCorrect,placedAngles,hourExplanation,handHint,cleanClock,newClockSession,mod} from './clock-model.js?v=39';
 
-import {clockMenuView,clockIntroView,clockExploreView,clockTaskView,clockSummaryView} from './clock-child-ui.js?v=37';
+import {clockMenuView,clockIntroView,clockExploreView,clockTaskView,clockSummaryView} from './clock-child-ui.js?v=39';
 const CHILD = {
  "play": "Toca el botón verde para jugar.",
  "minute": "Mueve la aguja larga.",
@@ -53,7 +54,7 @@ export function clockSVG(angles,{seconds=false,active=null,ghost=null,onlyHour=f
  const order=active?[...hands.filter(h=>h!==active),active]:hands;
  return `<svg viewBox="0 0 440 440" class="clock-face" aria-hidden="true" focusable="false"><circle cx="220" cy="220" r="213" fill="#fffdf8" stroke="#e8dcc5" stroke-width="8"/><circle cx="220" cy="220" r="184" fill="none" stroke="#e9e1ee" stroke-width="1.5"/>${ticks}${ghost?handSVG(ghost.hand,ghost.angle,{ghost:true}):''}${order.map(h=>handSVG(h,angles[h],{active:active===h})).join('')}${numbers}<circle cx="220" cy="220" r="12" fill="#49385f"/><circle cx="220" cy="220" r="4" fill="white"/></svg>`;
 }
-export function clockAudioPhrases(){return [...new Set([...Object.values(CLOCK_COPY),...Object.values(CHILD),...CLOCK_LESSONS.flatMap(l=>[1,3,5].flatMap(i=>readingChoices(timeOf(l.times[i]),l.seconds).map(t=>spokenTime(t,l.seconds)))),...CLOCK_LESSONS.flatMap(l=>[l.explanation,...l.times.flatMap(time=>{const t=timeOf(time);return [spokenTime(t,!!l.seconds),`Marca esta hora. ${spokenTime(t,!!l.seconds)}`,...['hour','minute','second'].map(h=>handHint(h,t))]})])])]}
+export function clockAudioPhrases(){return [...new Set([...Object.values(CLOCK_COPY),...Object.values(CHILD),...foundationVoices,...CLOCK_LESSONS.flatMap(l=>[1,3,5].flatMap(i=>readingChoices(timeOf(l.times[i]),l.seconds).map(t=>spokenTime(t,l.seconds)))),...CLOCK_LESSONS.flatMap(l=>[l.explanation,...l.times.flatMap(time=>{const t=timeOf(time);return [spokenTime(t,!!l.seconds),`Marca esta hora. ${spokenTime(t,!!l.seconds)}`,...['hour','minute','second'].map(h=>handHint(h,t))]})])])]}
 
 export function startClockLearning(container,options){
  let progress=cleanClock(options.progress),screen='menu',paused=false,dead=false,lastSpeech='',pointer=null,previewSeconds=false,onlyHour=false,exploreTime=360*60;
@@ -81,7 +82,8 @@ export function startClockLearning(container,options){
   const recommended=CLOCK_LESSONS.find(l=>!progress.lessons[l.id]?.sessions)||CLOCK_LESSONS[0];
   shell(clockMenuView(progress,clockSVG(clockAngles({h:6,m:30}),{ring:false})));
   $('#clock-menu').hidden=true;$('#clock-explore').onclick=explore;
-  $('#clock-play')?.addEventListener('click',()=>intro(recommended.id));
+  $('#clock-play')?.addEventListener('click',()=>progress.foundation?.complete?intro(recommended.id):foundation());
+  $('#clock-from-zero')?.addEventListener('click',()=>foundation(!!progress.foundation?.complete));
   $('#clock-continue')?.addEventListener('click',exercise);
   $$('[data-clock-lesson]').forEach(b=>b.onclick=()=>intro(b.dataset.clockLesson));say(CHILD.play);focusTitle();
  }
@@ -98,12 +100,74 @@ export function startClockLearning(container,options){
  }
  function exploreValue(){return {h:Math.floor(exploreTime/3600)||12,m:Math.floor(exploreTime/60)%60,s:exploreTime%60}}
  function drawExplore(){const t=exploreValue();$('#clock-demo-face').innerHTML=clockSVG(clockAngles(t),{seconds:previewSeconds,onlyHour});$('#clock-demo-face').setAttribute('role','img');$('#clock-demo-face').setAttribute('aria-label',spokenTime(t,previewSeconds));$('#clock-demo-digital').textContent=digitalTime(t,previewSeconds);$('#clock-demo-note').textContent=''}
- function intro(id){
-  screen='intro';const l=lessonFor(id),t=timeOf(l.example);
-  shell(clockIntroView(l,t,clockSVG(clockAngles(t),{seconds:l.seconds})));
-  $('#clock-example-hear').onclick=()=>listen(spokenTime(t,l.seconds));
-  $('#clock-start-lesson').onclick=()=>{if(progress.active?.lesson!==l.id)progress.active=newClockSession(l.id,progress.lessons[l.id]?.sessions||0);progress.lastLesson=l.id;save();exercise()};say(CHILD.demo,spokenTime(t,l.seconds),CHILD.play);focusTitle();
- }
+function foundation(restart=false) {
+  screen='foundation';paused=false;
+  if(restart||!progress.foundation)progress.foundation={index:0,complete:false};
+  const index=Math.min(progress.foundation.index,FOUNDATIONS.length-1);
+  progress.foundation.index=index;
+  const step=FOUNDATIONS[index];
+  const {html,correct}=foundationView(step,clockSVG);
+  shell(html);save();
+  if(index>0){
+    const back=document.createElement("button");back.className="clock-quiet basics-back";back.textContent="↶";back.setAttribute("aria-label","Volver un paso");
+    back.onclick=()=>{progress.foundation.index=index-1;foundation()};
+    $(".clock-toolbar>div").prepend(back);
+  }
+  function advance(){
+    if(dead||paused||screen!=='foundation'||progress.foundation.index!==index)return;
+    options.sound('letter');
+    if(index+1===FOUNDATIONS.length){
+      progress.foundation.complete=true;save();
+      if(progress.active)exercise();else intro('hours');
+    }else{progress.foundation.index=index+1;foundation()}
+  }
+  function choose(button){
+    if(paused||dead)return;
+    if(String(correct)===button.dataset.answer){advance();return}
+    const guide=$$('[data-answer]').find(b=>b.dataset.answer===String(correct));
+    guide?.classList.add('lit');
+    $('.basics-feedback').textContent='👀';
+    say(BASICS_COPY.again,step.speech);
+  }
+  for(const button of $$('[data-answer]'))button.onclick=()=>choose(button);
+  for(const button of $$('[data-basics-next]'))button.onclick=advance;
+  const board=$('.basics-circle');
+  if(board && step.kind==='turn'){
+    let start=null;
+    board.onpointerdown=e=>{start={x:e.clientX,y:e.clientY}};
+    board.onpointerup=e=>{
+      if(!start||Math.hypot(e.clientX-start.x,e.clientY-start.y)<15)return;
+      const end=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-answer]');
+      if(end&&board.contains(end))choose(end);
+      start=null;
+    };
+  }
+  const flowers=new Set();
+  for(const button of $$('[data-flower]'))button.onclick=()=>{
+    const flower=button.dataset.flower;
+    if(!flowers.has(flower)){
+      flowers.add(flower);button.classList.add('counted');button.dataset.count=flowers.size;
+    }
+    listen(countWords[Number(button.dataset.count)]);
+  };
+  const prompt=[step.speech];
+  if(step.kind==='count')prompt.push(step.n<12?BASICS_COPY.add:BASICS_COPY.next);
+  else if(['oclock','digital','day'].includes(step.kind))prompt.push(BASICS_COPY.next);
+  say(...prompt);focusTitle();
+}
+ function intro(id,i=0){
+  screen='intro';
+  const l=lessonFor(id),demo=bridgeState(l,i);
+  const clock=lessonClock(demo.t,clockSVG,demo);
+  shell(clockIntroView(l,demo,clock,i));
+  $('#clock-example-hear').onclick=()=>listen(spokenTime(demo.t,l.seconds));
+  $('#clock-bridge-step').onclick=()=>intro(id,i===demo.count?0:i+1);
+  $('#clock-start-lesson').onclick=()=>{
+    if(progress.active?.lesson!==l.id)progress.active=newClockSession(l.id,progress.lessons[l.id]?.sessions||0);
+    progress.lastLesson=l.id;save();exercise();
+  };
+  say(demo.speech);focusTitle();
+}
  function exercise(){
   if(dead||!progress.active)return;screen='exercise';paused=false;const a=progress.active,l=lesson(),{time:t,type}=task(),hand=activeHand();
   checkCueGiven=false;
